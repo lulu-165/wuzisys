@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<meta name="HandheldFriendly" content="true" />
+	<meta name="MobileOptimized" content="320" />
+	<title>物资扫码拣货</title>
+	<script type="text/javascript" src="/mvc/views/m_scanCode/js/common.js"></script>
+	<script src="/public/js/jquery-1.8.3.min.js?a1"></script><!-- 引入jquery.js -->
+	<script src="/public/layui/layui.js?a2"></script><!-- 引入 layui.js -->
+	<link rel="stylesheet" href="/public/layui/css/layui.css?a2" media="all"> <!-- 引入 layui.css -->
+	<script type="text/javascript">
+		var img = null;
+		var blist = [];
+
+		function scaned(t, r, f) { //t:类型(如QR）；r为扫码结果；f为文件名含后缀
+
+			handleBarCode(r); //扫码拣货
+
+		}
+
+		function selected(id) {
+			var h = blist[id];
+			update(h.type, h.result, h.file);
+			if (h.result.indexOf('http://') == 0 || h.result.indexOf('https://') == 0) {
+				plus.nativeUI.confirm(h.result, function (i) {
+					if (i.index == 0) {
+						plus.runtime.openURL(h.result);
+					}
+				}, '', ['打开', '取消']);
+			} else {
+				plus.nativeUI.alert(h.result);
+			}
+		}
+
+		function update(t, r, f) {
+			outSet('扫描成功：');
+			outLine(t);
+			outLine(r);
+			outLine('\n图片地址：' + f);
+			if (!f || f == 'null') {
+				img.src = 'img/barcode.png';
+			} else {
+				plus.io.resolveLocalFileSystemURL(f, function (entry) {
+					img.src = entry.toLocalURL();
+				});
+				//img.src = 'http://localhost:13131/'+f;
+			}
+		}
+
+		function onempty() {
+			if (window.plus) {
+				plus.nativeUI.alert('无扫描记录');
+			} else {
+				alert('无扫描记录');
+			}
+		}
+
+		function cleanHistroy() {
+			if (blist.length > 0) {
+				var hl = document.getElementById('history');
+				hl.innerHTML = '<li id="nohistory" class="ditem" onclick="onempty();">无历史记录	</li>';
+			}
+			plus.io.resolveLocalFileSystemURL('_doc/barcode/', function (entry) {
+				entry.removeRecursively(function () {
+					// Success
+				}, function (e) {
+					//alert( "failed"+e.message );
+				});
+			});
+		}
+		// 打开二维码扫描界面 
+		function openBarcode() {
+			if (deliveryno == "" || deliveryno == undefined) {
+				audio_electOrder.play(); //播放声音“请选择调拨单”
+				layer.msg("请先选择调拨单！", {
+					icon: 0,
+					offset: "auto",
+					time: 2000
+				});
+				return false;
+			}
+
+			createWithoutTitle('barcode_scan.html', {
+				titleNView: {
+					type: 'float',
+					backgroundColor: 'rgba(215,75,40,0.3)',
+					titleText: '扫码拣货',
+					titleColor: '#FFFFFF',
+					autoBackButton: true,
+					buttons: [{
+						fontSrc: '_www/helloh5.ttf',
+						text: '\ue302',
+						fontSize: '18px',
+						onclick: 'javascript:scanPicture()'
+					}]
+				}
+			});
+		}
+		// 打开自定义扫描界面 
+		function openBarcodeCustom() {
+			createWithoutTitle('barcode_custom.html', {
+				titleNView: {
+					type: 'float',
+					backgroundColor: 'rgba(215,75,40,0.3)',
+					titleText: '扫一扫',
+					titleColor: '#FFFFFF',
+					autoBackButton: true,
+					buttons: [{
+						fontSrc: '_www/helloh5.ttf',
+						text: '\ue401',
+						fontSize: '18px',
+						onclick: 'javascript:switchFlash()'
+					}]
+				}
+			});
+		}
+	</script>
+	<link rel="stylesheet" href="/mvc/views/m_scanCode/css/common.css" type="text/css" charset="utf-8" />
+	<style type="text/css" media="screen">
+		.hdata {
+			color: #e1673e;
+			font-size: 14px;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+	</style>
+
+	<style>
+		.saoma {
+			height: 38px;
+			line-height: 38px;
+			background-color: #d70b3d;
+			color: #ffffff;
+			text-align: center;
+			margin-right: 12px;
+			padding: 0 10px;
+			border-radius: 19px;
+		}
+
+		form {
+			width: 100%;
+			margin: 50px 0 0;
+			text-align: center;
+		}
+
+		.scroll-body {
+			max-height: 500px !important;
+		}
+
+		.xm-option-content {
+			color: #1E9FFF !important;
+		}
+
+		.layui-table-view {
+			margin: 0 auto;
+		}
+
+		.jianhuoed {
+			color: #aaa;
+		}
+
+		xm-select {
+			border-color: #d70b3d !important;
+		}
+	</style>
+	<script src="/public/js/xm-select.js"></script><!-- 引入jquery.js -->
+
+</head>
+
+<body onload="img=document.getElementById('bimg')">
+	<div style="text-align: right;border-bottom: 1px solid #eee;padding:5px 5px 3px 5px; ">
+		<?= $_SESSION['userInfo']['uName'] ?></li>
+		 <a style="margin:5px 0 0 11px;" href="/login/logout&dev=mobile">退出</a>
+	</div>
+	
+	<img style="width:40%;margin: 10px 0 10px 0;" id="bimg" src="/mvc/views/m_scanCode/img/barcode.png" />
+
+	<button style="font-size:18px; width:92%;margin:6px 0 15px;" type="button" class="layui-btn layui-btn-warm"
+		onclick="openBarcode()">
+		<img style="width:19px; height:19px;vertical-align:text-top;" src="/public/imgs-app/applogo_click2.png" />
+		<span>扫码拣货</span>
+	</button>
+
+	<form style="margin: 0;" class="layui-form layui-inline" action="">
+		<div class="layui-form-item layui-inline" style="margin-bottom:5px;">
+			<div class="layui-input-inline" style="margin: 0;">
+				<div style="width: 222px;" placeholder="请选择调拨单" id="selectOrder" class="xm-select-demo"></div>
+			</div>
+		</div>
+	</form>
+
+	<!-- <div class="layui-form-item layui-inline">
+	<div class="layui-input-inline" style="width: 135px;">
+		<div style="color:#d70b3d;">最新被扫实物码：</div>
+		<div id="saomaTip" style="color:#555;font-weight:600;"></div>
+	</div>
+</div> -->
+
+
+	<i id="tableTip" style="display: none;margin: 0 auto;width: 16px;color:#009688;"
+		class="layui-icon layui-icon-triangle-d"></i>
+	<table class="layui-hide" id="table_wuziList" lay-filter="user"></table>
+	<button id="confirmAction" style="display:none;float:right;margin:6px 1px 0 0;" type="button"
+		class="layui-btn layui-btn-normal">点击通过</button>
+
+	<audio id="music_success" src="/public/mp3/jianhuo_success2.mp3" preload></audio>
+	<audio id="music_error" src="/public/mp3/jianhuo_error.mp3" preload></audio>
+	<audio id="music_start" src="/public/mp3/start_jianhuo.mp3" preload></audio>
+	<audio id="music_electOrder" src="/public/mp3/tip_selectOrder.mp3" preload></audio>
+	<audio id="music_getCodeError" src="/public/mp3/tip_getCodeError.mp3" preload></audio>
+	<audio id="music_noWuzi" src="/public/mp3/tip_noWuzi.mp3" preload></audio>
+
+
+	<script>
+		// //开始就播放声音测试
+		var audio_success = document.getElementById('music_success');
+		var audio_error = document.getElementById('music_error');
+		var audio_start = document.getElementById('music_start');
+		var audio_electOrder = document.getElementById('music_electOrder');
+		var audio_getCodeError = document.getElementById('music_getCodeError');
+		var audio_noWuzi = document.getElementById('music_noWuzi');
+
+		audio_electOrder.play(); //播放声音“请选择调拨单”
+
+		//提示用户开始选择调拨单
+		layer.msg("请选择调拨单！");
+
+		var deliveryno = ""; //出库单号
+		var shiwuma = ""; //实物码
+
+		//带搜索框的下拉菜单
+		var arrData = "";
+		$.ajax({
+			url: "../../mvc/views/data_fromThird/getdingdanno.php",
+			async: false,
+			success: function (result) {
+				arrData = JSON.parse(result);
+				//console.log(result);     
+			}
+		});
+
+		//下拉选择菜单或搜索
+		var selectOrder = xmSelect.render({
+			el: '#selectOrder',
+			radio: true,
+			tips: '请选择调拨单',
+			searchTips: '搜索',
+			clickClose: true,
+			filterable: true,
+			paging: true,
+			pageSize: 10,
+			data: arrData,
+			on: function (data) {
+				audio_start.play(); //默认开始播放的声音
+				$("#tableTip").css("display", "block");
+				layer.msg("请开始扫码拣货！");
+				if (data.arr.length > 0) {
+					deliveryno = data.arr[0]['value'];
+					initTable(deliveryno);
+					$("#confirmAction").css("display", "block");
+				} else {
+					$("#confirmAction").css("display", "none");
+				}
+			},
+			hide() {
+				//延迟获得焦点，防止立即获得焦点被覆盖。
+
+			}
+		});
+
+
+		//扫码枪进行扫码
+		//var fristkeyCode13 = true;
+
+		function handleBarCode(QRcode) {
+
+			//if (event.keyCode == 13) { //响应。Enter键为13  空格为32
+			//fristkeyCode13 = false;
+
+			deliveryno = $(".xm-label-block span").eq(0).html();
+			var shiwuma = QRcode; //$.trim($("#wuziCode").val());
+
+			//扫码结果添加空格，为了下次筛选出最新的结果。
+
+			if (deliveryno == "" || deliveryno == undefined) {
+				audio_electOrder.play(); //播放声音“请选择调拨单”
+				layer.msg("请选择调拨单！");
+				return false;
+			} else if (shiwuma == "" || isNaN(shiwuma || shiwuma.length < 10)) { //获取实物码失败;
+				alert(shiwuma);
+				audio_getCodeError.play(); //播放获取实物码失败的提示音
+				layer.msg("获取实物码失败！", {
+					icon: 0,
+					offset: "auto",
+					time: 2000
+				});
+				return false;
+			}
+
+
+			var url = '../../mvc/views/data_fromThird/wuzichuku.php?deliveryno=' + deliveryno + '&shiwuma=' + shiwuma;
+			$.ajax({
+				url: url,
+				async: true,
+				success: function (result) {
+					//fristkeyCode13 = true;
+
+					arrData = JSON.parse(result);
+					console.log(arrData);
+					//alert(arrData.code);//code=0出库失败，1-成功。
+					if (arrData.code == 1) {
+						audio_success.play();
+						layer.msg("拣货成功！", {
+							icon: 1,
+							offset: "auto",
+							time: 1000
+						});
+						$(".layui-table-main").eq(0).find("tr").each(function () {
+							var batchNo = $(this).find("td[data-field$='batchNo'] .layui-table-cell")
+								.html();
+							if (batchNo == shiwuma) {
+								$(this).addClass("jianhuoed"); //已拣货
+								$(this).find("td[data-field$='jhstatus'] .layui-table-cell").html("已拣货");
+							}
+						});
+					} else {
+						audio_noWuzi.play();
+						layer.msg("出库单中未找到！", {
+							icon: 0,
+							offset: "auto",
+							time: 2000
+						});
+					}
+					//setTimeout(function(){  window.location.href=""; }, 1000);
+				}
+			});
+			//}
+		};
+
+		function initTable(deliveryNo) {
+			layui.use('table', function () {
+				var table = layui.table;
+				//方法级渲染
+				table.render({
+					elem: '#table_wuziList',
+					url: '../../mvc/views/data_fromThird/dingdanno_detail.php?deliveryNo=' + deliveryNo,
+					cols: [
+						[{
+								field: 'matName',
+								title: '物资名称'
+							},
+							{
+								field: 'batchNo',
+								title: '实物码'
+							},
+
+							{
+								field: 'deliveryNum',
+								title: '数量'
+							},
+							{
+								field: 'jhstatus',
+								title: '拣货状态',
+								width: 90
+							}
+						]
+					],
+					id: 'testReload',
+					//page: true,
+					//width: 900,
+				});
+			});
+		}
+
+		//确认操作
+		$("#confirmAction").click(function() {
+		var approver = getQueryVariable("approver"); //审批人
+		 
+        if (approver == "" || approver=="null") {
+            layer.msg("您无出库审批权限，请联系管理员！", {
+                icon: 2
+            });
+            return false;
+        }
+        layer.confirm('确定要提交确认（通过）操作吗？<br><br>出库审批人：<span style="padding:3px 5px" id="approverInput" >' + approver + '</span>', {
+            icon: 3,
+            title: '提示'
+        }, function(index) {
+            //确认拣货
+            $.ajax({
+                async: false,
+                type: "post",
+                data: {
+                    "deliveryNo": deliveryno, //出库单号
+                },
+                dataType: 'json',
+                url: "../../mvc/views/data_fromThird/wuzichukuqueren.php?approver=" + approver + "&deliveryno=" + deliveryno,
+                success: function(res) {
+                    if (res.code == 1) {
+                        layer.msg("确认成功！", {
+                            icon: 1
+                        });
+						setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        layer.msg("确认失败，" + res.msg, {
+                            icon: 2
+                        });
+                    }
+                },
+                error: function(msg) {
+                    alert(msg.status + "服务繁忙，请刷新或稍后再试。");
+                }
+            }); //end ajax
+        }); //end confirm
+		});
+
+//JS获取url参数
+		function getQueryVariable(variable)
+{
+       var query = window.location.search.substring(1);
+       var vars = query.split("&");
+       for (var i=0;i<vars.length;i++) {
+               var pair = vars[i].split("=");
+               if(pair[0] == variable){return pair[1];}
+       }
+       return(false);
+}
+	</script>
+
+</body>
+
+</html>

@@ -1,0 +1,1 @@
+{"dasha":2000,"bayi":2000,"nanlu":5000,"jianxiu2":2000,"weixiu2":6000,"zongku":2000,"zapinku":2000}

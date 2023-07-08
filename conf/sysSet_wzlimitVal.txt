@@ -1,0 +1,1 @@
+[{"cangku":"nanlu","class1":"01 劳保用品1","wzName":"一次性医用口罩","wzCode":"60000000035","warningVal_min":"1","warningVal_max":"200"},{"cangku":"bayi","class1":"01 劳保用品2","wzName":"帽子","wzCode":"60000000031","warningVal_min":"2","warningVal_max":"55"}]
